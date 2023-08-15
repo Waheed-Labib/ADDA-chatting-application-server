@@ -1,6 +1,7 @@
 const express = require('express')
 const cors = require('cors');
 const { MongoClient, ServerApiVersion } = require('mongodb');
+require('dotenv').config();
 
 const app = express()
 const port = process.env.PORT || 5000;
@@ -10,13 +11,13 @@ const port = process.env.PORT || 5000;
 app.use(cors())
 app.use(express.json())
 
-const users = require('./fake data/users.json')
+// const users = require('./fake data/users.json')
 const groups = require('./fake data/groups.json')
 const messages = require('./fake data/messages.json')
 
 // mongodb configuration
 
-const uri = "mongodb+srv://process.env.DB_USER:process.env.DB_PASSWORD@cluster0.nbmbmyw.mongodb.net/?retryWrites=true&w=majority"
+const uri = process.env.MONGODB_URI
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -29,21 +30,23 @@ const client = new MongoClient(uri, {
 
 async function run() {
     try {
-        const database = client.db("insertDB");
-        const haiku = database.collection("haiku");
-        // create a document to insert
-        const doc = {
-            title: "Record of a Shriveled Datum",
-            content: "No bytes, no problem. Just insert a document, in MongoDB",
-        }
-        const result = await haiku.insertOne(doc);
-        console.log(`A document was inserted with the _id: ${result.insertedId}`);
+        const database = client.db("ADDA");
+        const usersCollection = database.collection("users");
+
+        app.post('/users', async (req, res) => {
+            const user = req.body;
+            const result = await usersCollection.insertOne(user);
+            console.log(`An user was inserted with the _id: ${result.insertedId}`);
+            res.send(user)
+        })
+
+
 
     } finally {
 
     }
 }
-run().catch(console.dir);
+run().catch(err => console.dir(err));
 
 
 // api
@@ -52,9 +55,9 @@ app.get('/', (req, res) => {
     res.send('ADDA Server running')
 })
 
-app.get('/users', (req, res) => {
-    res.send(users)
-})
+// app.get('/users', (req, res) => {
+//     res.send(users)
+// })
 
 app.get('/groups', (req, res) => {
     res.send(groups)
