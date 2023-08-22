@@ -1,6 +1,6 @@
 const express = require('express')
 const cors = require('cors');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
 
 const app = express()
@@ -33,6 +33,7 @@ async function run() {
         const database = client.db("ADDA");
         const usersCollection = database.collection("users");
 
+        // create user to the database
         app.post('/users', async (req, res) => {
             const user = req.body;
             const result = await usersCollection.insertOne(user);
@@ -40,7 +41,57 @@ async function run() {
             res.send(user)
         })
 
+        // read users from database 
+        app.get('/users', async (req, res) => {
+            const cursor = usersCollection.find({});
+            const result = await cursor.toArray();
+            res.send(result)
+        })
 
+        // read particular user from database
+        app.get('/users/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { uid: id };
+            const result = await usersCollection.findOne(query)
+            res.send(result)
+        })
+
+        // update particular user in database
+        app.put('/users/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { uid: id };
+
+            const user = req.body;
+
+            const options = {
+                upsert: true
+            };
+
+            const updatedUser = {
+                $set: {
+
+                    uid: user.uid,
+                    name: user.name,
+                    email: user.email,
+                    photoURL: user.photoURL,
+                    gender: user.gender,
+                    dateOfBirth: user.dateOfBirth,
+                    occupation: user.occupation,
+                    institute: user.institute,
+                    address: user.address
+                }
+            }
+
+            const result = await usersCollection.updateOne(filter, updatedUser, options);
+        })
+
+        // delete particular user in database
+        app.delete('/users/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { uid: id };
+            const result = await usersCollection.deleteOne(query);
+            res.send(result)
+        })
 
     } finally {
 
