@@ -13,11 +13,11 @@ app.use(express.json())
 
 // const users = require('./fake data/users.json')
 const groups = require('./fake data/groups.json')
-const messages = require('./fake data/messages.json')
+// const messages = require('./fake data/messages.json')
 
 // mongodb configuration
 
-const uri = process.env.MONGODB_URI
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.nbmbmyw.mongodb.net/?retryWrites=true&w=majority`
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -32,13 +32,14 @@ async function run() {
     try {
         const database = client.db("ADDA");
         const usersCollection = database.collection("users");
+        const chatsCollection = database.collection("chats");
 
         // create user to the database
         app.post('/users', async (req, res) => {
             const user = req.body;
             const result = await usersCollection.insertOne(user);
             console.log(`An user was inserted with the _id: ${result.insertedId}`);
-            res.send(user)
+            res.send(result)
         })
 
         // read users from database 
@@ -78,11 +79,13 @@ async function run() {
                     dateOfBirth: user.dateOfBirth,
                     occupation: user.occupation,
                     institute: user.institute,
-                    address: user.address
+                    address: user.address,
+                    chatBox: user.chatBox
                 }
             }
 
             const result = await usersCollection.updateOne(filter, updatedUser, options);
+            res.send(result)
         })
 
         // delete particular user in database
@@ -90,6 +93,51 @@ async function run() {
             const id = req.params.id;
             const query = { uid: id };
             const result = await usersCollection.deleteOne(query);
+            res.send(result)
+        })
+
+        // create a new chat in tha database
+        app.post('/chats', async (req, res) => {
+            const chat = req.body;
+            const result = await chatsCollection.insertOne(chat);
+            console.log(`An chat was inserted with the _id: ${result.insertedId}`);
+            res.send(result)
+        })
+
+        // get chats from database 
+        app.get('/chats', async (req, res) => {
+            const cursor = chatsCollection.find({});
+            const result = await cursor.toArray();
+            res.send(result)
+        })
+
+        // get particular chat from database
+        app.get('/chats/:id', async (req, res) => {
+            const id = parseInt(req.params.id);
+            const query = { chatId: id };
+            const result = await chatsCollection.findOne(query)
+            res.send(result)
+        })
+
+        // update chat in database
+        app.put('/chats/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { chatId: id };
+
+            const chat = req.body;
+
+            const options = {
+                upsert: true
+            };
+
+            const updatedChat = {
+                $set: {
+                    chatId: chat.chatId,
+                    messages: chat.messages
+                }
+            }
+
+            const result = await chatsCollection.updateOne(filter, updatedChat, options);
             res.send(result)
         })
 
@@ -106,25 +154,13 @@ app.get('/', (req, res) => {
     res.send('ADDA Server running')
 })
 
-// app.get('/users', (req, res) => {
-//     res.send(users)
-// })
 
 app.get('/groups', (req, res) => {
     res.send(groups)
 })
 
-app.get('/messages', (req, res) => {
-    res.send(messages)
-})
 
-app.post('/messages', (req, res) => {
-    console.log('POST api called');
-    const message = req.body;
-    message.msgId = messages.length + 1;
-    messages.push(message);
-    res.send(message)
-})
+
 
 app.listen(port, () => {
     console.log('ADDA Server running on port : ', port)
